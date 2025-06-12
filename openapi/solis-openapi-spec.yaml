@@ -1,0 +1,458 @@
+openapi: 3.0.3
+info:
+  title: Solis Payment Protocol API
+  description: |
+    The Solis Payment Protocol is a standardized API specification for payments 
+    that eliminates common user errors such as network mismatch, token mismatch, and incorrect 
+    payment amounts. While the initial focus is blockchain payments but this specification is designed to be adaptable to other novel methods.
+  version: 1.0.0
+  contact:
+    name: Solis Protocol
+    url: https://github.com/solis-money
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.example.com/solis
+    description: Example Solis Enabled API server
+
+paths:
+  /{payment-id}:
+    get:
+      summary: Get Payment Information
+      description: Retrieves basic information about a payment request
+      operationId: getPaymentInfo
+      tags: 
+        - Payment Information
+      parameters:
+        - name: payment-id
+          in: path
+          required: true
+          description: Unique identifier for the payment request
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+            example: "pay_7dZ4MGal82bx"
+      responses:
+        '200':
+          description: Payment information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - merchant
+                  - description
+                  - amount
+                  - expiresAt
+                  - status
+                properties:
+                  id:
+                    type: string
+                    example: "pay_7dZ4MGal82bx"
+                  merchant:
+                    type: string
+                    example: "Example Store"
+                  description:
+                    type: string
+                    example: "Order #12345"
+                  value:
+                    $ref: '#/components/schemas/Value'
+                  expiresAt:
+                    type: integer
+                    format: int64
+                    example: 1698765432
+                  status:
+                    $ref: '#/components/schemas/PaymentStatus'
+                  intent:
+                    $ref: '#/components/schemas/PaymentIntent'
+
+
+  /assets/{payment-id}:
+    get:
+      summary: List Supported Assets
+      description: Returns supported cryptocurrency assets and networks for the payment
+      operationId: listSupportedAssets
+      tags: 
+        - Payment Information
+      parameters:
+        - name: payment-id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: pay_7dZ4MGal82bx
+      responses:
+        '200':
+          description: Supported assets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupportedAsset'
+                    
+
+  /quote/{payment-id}:
+    post:
+      summary: Request Payment Quote
+      description: Requests a payment quote for a specific asset and network
+      operationId: requestQuote
+      tags:
+        - Payment Processing
+      parameters:
+        - name: payment-id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: pay_7dZ4MGal82bx
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - network
+                - asset
+              properties:
+                network:
+                  $ref: '#/components/schemas/Network'
+                asset:
+                  $ref: '#/components/schemas/Asset'
+                  
+      responses:
+        '200':
+          description: Quote generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - network
+                  - token
+                  - quote
+                properties:
+                  id: 
+                    type: string
+                    example: quote_8dZ4MGal82bx
+                    description: The quote ID
+                  expiresAt: 
+                    type: integer
+                    format: int64
+                  network:
+                    $ref: '#/components/schemas/Network'
+                  value:
+                    $ref: '#/components/schemas/Value'
+
+  /intent/{payment-id}:
+    post:
+      summary: Create Payment Intent
+      description: Creates a payment intent with transaction parameters
+      operationId: createPaymentIntent
+      tags: 
+        - Payment Processing
+      parameters:
+        - name: payment-id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: pay_7dZ4MGal82bx
+            
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - network
+                - asset
+              properties:
+                network:
+                  $ref: '#/components/schemas/Network'
+                asset:
+                  $ref: '#/components/schemas/Asset'
+                quoteId:
+                  type: string
+                  example: quote_8dZ4MGal82bx
+                compliance:
+                  $ref: '#/components/schemas/ComplianceInfo'
+                        
+                    
+      responses:
+        '200':
+          description: Payment intent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - network
+                  - token
+                  - recipientAddress
+                  - expiresAt
+                properties:
+                  network:
+                    $ref: '#/components/schemas/Network'
+                  value:
+                    $ref: '#/components/schemas/Value'
+                  destination:
+                    $ref: '#/components/schemas/Destination'
+                
+
+  /notify/{payment-id}:
+    post:
+      summary: Transaction Notification
+      description: Endpoint for wallets to notify merchants about transaction submission
+      operationId: notifyTransaction
+      tags:
+        - Payment Processing
+      parameters:
+        - name: payment-id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: pay_7dZ4MGal82bx
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hash:
+                  type: string
+                  example: 0x10fe14ae0a6ea8a4e69827b2a72a2a24fd151d2f017ac62943b94351a2e8d935
+                transaction: 
+                  type: string
+                  description: The wallet could optionally supply the full signed transaction payload for the service provider to validate and relay.
+                sender:
+                  $ref: '#/components/schemas/AddressReference'
+                      
+                  
+      responses:
+        '200':
+          description: Transaction notification received
+          content:
+            application/json:
+              schema:
+                type: object
+                
+
+components:
+  schemas:
+    Network:
+      type: string
+      enum: ["BITCOIN", "ETHEREUM", "BASE", "POLYGON", "ARBITRUM", "OPTIMISM", "SOLANA", "BINANCE", "AVALANCHE", "TRON", "LITECOIN", "DOGECOIN", "CARDANO"]
+      example: "ETHEREUM"
+
+    Asset:
+      type: string
+      enum: ["BTC", "ETH", "USDC", "USDT", "BNB", "SOL", "ADA", "XRP", "DOGE", "DOT", "AVAX", "POL", "DAI", "LTC"]
+      example: "USDC"
+
+    PaymentStatus:
+      type: string
+      enum: ["PENDING", "PROCESSING", "CANCELLED", "COMPLETE", "UNDERPAID", "OVERPAID", "EXPIRED"]
+
+    Value:
+      type: object
+      required:
+        - amount
+        - asset
+      properties:
+        amount:
+          type: string
+          pattern: '^[0-9]+(\.[0-9]+)?$'
+          example: "100.01"
+        asset:
+          $ref: '#/components/schemas/Asset'
+
+    AddressReference:
+      type: object
+      required:
+        - address
+      properties:
+        address:
+          type: string
+          example: "0xB180731051bb0116DA91Ab7F1bf3cE1bD7C02Fd4"
+        reference:
+          type: string
+          example: "5431263"
+          description: "A destination tag or ledger reference"
+
+    Destination:
+      type: object
+      required:
+        - type
+        - details
+      properties:
+        type:
+          type: string
+          enum: ["CRYPTO"]
+        details:
+          $ref: '#/components/schemas/AddressReference'
+
+    Token:
+      type: object
+      required:
+        - asset
+        - decimals
+      properties:
+        asset:
+          $ref: '#/components/schemas/Asset'
+        address:
+          type: string
+          example: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+          nullable: true
+        decimals:
+          type: integer
+          minimum: 0
+          maximum: 18
+
+    SupportedAsset:
+      type: object
+      required:
+        - network
+        - asset
+      properties:
+        network:
+          $ref: '#/components/schemas/Network'
+        asset:
+          $ref: '#/components/schemas/Asset'
+        address:
+          type: string
+          nullable: true
+        decimals:
+          type: integer
+          minimum: 0
+          maximum: 18
+
+    PaymentIntent:
+      type: object
+      description: Transaction details present when payment intent has been created
+      properties:
+        network:
+          $ref: '#/components/schemas/Network'
+        value:
+          $ref: '#/components/schemas/Value'
+        destination:
+          $ref: '#/components/schemas/Destination'
+        hash:
+          type: string
+          example: "0x10fe14ae0a6ea8a4e69827b2a72a2a24fd151d2f017ac62943b94351a2e8d935"
+          description: "Blockchain transaction hash when available"
+
+    ComplianceInfo:
+      type: object
+      required:
+        - format
+        - type
+        - details
+      properties:
+        format:
+          type: string
+          example: PLAIN
+          enum: ["PLAIN", "TOKENIZED", "ENCRYPTED"]
+          description: This will allow for future formats to share tokenized compliance information to destination parties
+        type:
+          type: string
+          enum: ["INDIVIDUAL", "ORGANIZATION"]
+        details:
+          type: object
+          required:
+            - firstName
+            - lastName
+            - country
+          properties:
+            firstName:
+              type: string
+              example: Satoshi
+            lastName:
+              type: string
+              example: Nakamoto
+            country:
+              type: string
+              pattern: '^[A-Z]{2}$'
+              example: US
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - PAYMENT_NOT_FOUND
+                - PAYMENT_EXPIRED
+                - UNSUPPORTED_ASSET
+                - UNSUPPORTED_NETWORK
+                - INVALID_QUOTE
+                - INVALID_AMOUNT
+                - MISSING_REQUIRED_FIELD
+                - INVALID_PAYMENT_ID
+                - INTERNAL_SERVER_ERROR
+            message:
+              type: string
+            details:
+              type: object
+
+  responses:
+    PaymentNotFound:
+      description: Payment ID not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    PaymentExpired:
+      description: Payment request has expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    UnsupportedAsset:
+      description: Asset or network not supported
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+security:
+  - {}
+
+tags:
+  - name: Payment Information
+    description: Endpoints for retrieving payment details and supported assets
+  - name: Payment Processing
+    description: Endpoints for quote generation, payment intent creation and notification
