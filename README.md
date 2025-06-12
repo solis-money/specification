@@ -34,14 +34,14 @@ This repository contains the specification and reference materials for the proto
 - [asset_codes.md](asset_codes.md) - Standardized network and asset codes for Solis
 - [flow-diagram.md](flow-diagram.md) - Visual representation of the payment flow
 - [examples.md](examples.md) - Implementation examples in various scenarios
-- [/openapi/solis-openapi-spec.yaml](/openapi/solis-openapi-spec.yaml) - OpenAPI specification for the Solis API
+- [solis-openapi-spec.yaml](/openapi/solis-openapi-spec.yaml) - OpenAPI specification for the Solis API
 
 ## How It Works
 
 1. **Merchant Creates Payment**: Generate a unique QR code with the Solis URI
-2. **User Scans Code**: Wallet app recognizes the protocol and fetches payment details
+2. **User Initiates Process**: Scanning a code, tap to pay or other method recognizes the protocol and fetches details
 3. **Asset List Retrieval**: Wallet gets list of supported assets/networks
-4. **Asset Selection**: User selects which asset they want to pay with
+4. **Asset Selection**: User selects which asset (or wallet defaults) they want to pay with
 5. **Quote Request**: Wallet requests exact amount in selected asset
 6. **Payment Intent**: Wallet creates payment intent with selected asset and quote
 7. **Simplified Payment**: The wallet executes the transaction with the exact parameters
