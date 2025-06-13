@@ -261,7 +261,7 @@ components:
 
     PaymentStatus:
       type: string
-      enum: ["PENDING", "PROCESSING", "CANCELLED", "COMPLETE", "UNDERPAID", "OVERPAID", "EXPIRED"]
+      enum: ["PENDING", "PROCESSING", "CANCELLED", "COMPLETE", "UNDERPAID", "OVERPAID", "EXPIRED", "REFUNDED"]
 
     Value:
       type: object
