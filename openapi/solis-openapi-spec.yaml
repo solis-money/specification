@@ -63,7 +63,7 @@ paths:
                   expiresAt:
                     type: integer
                     format: int64
-                    example: 1698765432
+                    example: 1698765432000
                   status:
                     $ref: '#/components/schemas/PaymentStatus'
                   intent:
@@ -136,6 +136,7 @@ paths:
                   - network
                   - token
                   - quote
+                  - expiresAt
                 properties:
                   id: 
                     type: string
@@ -144,6 +145,8 @@ paths:
                   expiresAt: 
                     type: integer
                     format: int64
+                    example: 1698765432000
+                    description: The expiration time for the quote in milliseconds since epoch. Minimum of 60 seconds in the future.
                   network:
                     $ref: '#/components/schemas/Network'
                   value:
@@ -335,6 +338,11 @@ components:
           type: integer
           minimum: 0
           maximum: 18
+        time:
+          type: integer
+          format: int64
+          example: 60000
+          description: The confirmation time for this option in milliseconds since epoch
 
     PaymentIntent:
       type: object

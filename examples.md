@@ -79,25 +79,29 @@ Response:
     "network": "ETHEREUM",
     "asset": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-    "decimals": 6
+    "decimals": 6,
+    "time": 2000
   },
   {
     "network": "BASE",
     "asset": "USDC",
     "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "decimals": 6
+    "decimals": 6,
+    "time": 2000
   },
   {
     "network": "POLYGON",
     "asset": "USDC",
     "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    "decimals": 6
+    "decimals": 6,
+    "time": 5000
   },
   {
     "network": "ARBITRUM",
     "asset": "USDC",
     "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    "decimals": 6
+    "decimals": 6,
+    "time": 5000
   }
 ]
 ```
@@ -126,7 +130,7 @@ Response:
 ```json
 {
   "id": "quote_XYZ123",
-  "expiresAt": 1698765932,
+  "expiresAt": 1698765932000,
   "network": "BASE",
   "value": {
     "amount": "100.00",
@@ -325,7 +329,7 @@ Response:
 ```json
 {
   "id": "quote_XYZ123",
-  "expiresAt": 1698765932,
+  "expiresAt": 1698765932000,
   "network": "BASE",
   "value": {
     "amount": "100.00",
@@ -409,25 +413,29 @@ Response showing USDC on multiple networks:
     "network": "ETHEREUM",
     "asset": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-    "decimals": 6
+    "decimals": 6,
+    "time": 60000
   },
   {
     "network": "BASE",
     "asset": "USDC",
     "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "decimals": 6
+    "decimals": 6,
+    "time": 2000
   },
   {
     "network": "POLYGON",
     "asset": "USDC",
     "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    "decimals": 6
+    "decimals": 6,
+    "time": 5000
   },
   {
     "network": "ARBITRUM",
     "asset": "USDC",
     "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    "decimals": 6
+    "decimals": 6,
+    "time": 5000
   }
 ]
 ```
@@ -460,7 +468,7 @@ The merchant backend creates a payment request as usual:
   "amount": "75.50",
   "currency": "USD",
   "customer": "customer_67890",
-  "expiresAt": 1698765432
+  "expiresAt": 1698765432000
 }
 ```
 
@@ -548,7 +556,7 @@ Response:
     "amount": "75.50",
     "asset": "USDC"
   },
-  "expiresAt": 1698765432,
+  "expiresAt": 1698765432000,
   "status": "PENDING"
 }
 ```
