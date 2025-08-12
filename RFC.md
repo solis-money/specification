@@ -68,7 +68,7 @@ Returns basic information about the payment request:
     "amount": "100.01",
     "asset": "USDC"
   },
-  "expiresAt": 1698765432,
+  "expiresAt": 1698765432000,
   "status": "PENDING"
 }
 ```
@@ -85,19 +85,22 @@ Returns an array of supported assets for payment:
     "network": "ETHEREUM",
     "asset": "ETH",
     "address": null,
-    "decimals": 18
+    "decimals": 18,
+    "time": 60000
   },
   {
     "network": "ETHEREUM",
     "asset": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-    "decimals": 6
+    "decimals": 6,
+    "time": 60000
   },
   {
     "network": "BASE",
     "asset": "USDC",
     "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "decimals": 6
+    "decimals": 6,
+    "time": 2000
   }
 ]
 ```
@@ -118,7 +121,7 @@ Response:
 ```json
 {
   "id": "quote_8dZ4MGal82bx",
-  "expiresAt": 1698765932,
+  "expiresAt": 1698765932000,
   "network": "BASE",
   "value": {
     "amount": "100.01",

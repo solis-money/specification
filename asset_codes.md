@@ -65,7 +65,8 @@ When a merchant specifies supported assets, they would use these codes. For exam
   "network": "BASE",  // From Network Codes list
   "asset": "USDC",    // From Asset Codes list
   "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Specific to USDC on Base
-  "decimals": 6
+  "decimals": 6,
+  "time": 5000        // Estimated time in milliseconds to process a transaction on this combination
 }
 ```
 
@@ -75,7 +76,8 @@ To indicate support for Ether on Ethereum:
   "network": "ETHEREUM", // From Network Codes list
   "asset": "ETH",        // From Asset Codes list
   "address": null,       // Native asset
-  "decimals": 18
+  "decimals": 18,
+  "time": 90000          // Estimated time in milliseconds to process a transaction on this combination
 }
 ```
 
