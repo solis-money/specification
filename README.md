@@ -1,6 +1,6 @@
-# Solis
+# Universal Payments Protocol
 
-![Solis Logo](images/solis.jpeg)
+![UPP Logo](images/solis.jpeg)
 
 A standardized protocol for simplifying cryptocurrency payments and eliminating common user errors.
 
@@ -8,7 +8,7 @@ A standardized protocol for simplifying cryptocurrency payments and eliminating 
 
 > **Note:** This specification is currently in a draft state. We are actively soliciting comments and proposals for improvement. Please contribute by opening an issue or submitting a pull request.
 
-Solis aims to solve common problems in cryptocurrency payment flows:
+The Universal Payments Protocol (UPP) aims to solve common problems in cryptocurrency payment flows:
 
 - Paying on the wrong network (e.g., USDC on Ethereum vs. Base)
 - Paying with the wrong asset (e.g., USDT instead of USDC)
@@ -22,7 +22,7 @@ This repository contains the specification and reference materials for the proto
 - **Error Prevention**: Eliminates the most common payment mistakes
 - **Simplified UX**: Reduces payment to scanning a QR code and selecting an asset
 - **Cross-Chain Compatible**: Works across all blockchain networks
-- **Open and Permissionless**: Solis is an open standard that can be adopted freely by any party without middlemen or facilitators.
+- **Open and Permissionless**: UPP is an open standard that can be adopted freely by any party without middlemen or facilitators.
 - **Privacy-Preserving**: Minimal data collection with optional compliance information
 - **Merchant-Friendly**: Simple REST API implementation
 - **Wallet-Agnostic**: Can be implemented by any wallet provider
@@ -31,14 +31,14 @@ This repository contains the specification and reference materials for the proto
 ## Repository Contents
 
 - [RFC.md](RFC.md) - The complete protocol specification
-- [asset_codes.md](asset_codes.md) - Standardized network and asset codes for Solis
+- [asset_codes.md](asset_codes.md) - Standardized network and asset codes for UPP
 - [flow-diagram.md](flow-diagram.md) - Visual representation of the payment flow
 - [examples.md](examples.md) - Implementation examples in various scenarios
-- [solis-openapi-spec.yaml](/openapi/solis-openapi-spec.yaml) - OpenAPI specification for the Solis API
+- [upp-openapi-spec.yaml](/openapi/upp-openapi-spec.yaml) - OpenAPI specification for the UPP API
 
 ## How It Works
 
-1. **Merchant Creates Payment**: Generate a unique QR code with the Solis URI
+1. **Merchant Creates Payment**: Generate a unique QR code with the UPP URI
 2. **User Initiates Process**: Scanning a code, tap to pay or other method recognizes the protocol and fetches details
 3. **Asset List Retrieval**: Wallet gets list of supported assets/networks
 4. **Asset Selection**: User selects which asset (or wallet defaults) they want to pay with
@@ -50,29 +50,29 @@ This repository contains the specification and reference materials for the proto
 
 ## Use Cases for AI and Agentic Payments
 
-The standardized and deterministic nature of the Solis protocol makes it an ideal payment rail for AI agents and other automated systems.
+The standardized and deterministic nature of the Universal Payments Protocol makes it an ideal payment rail for AI agents and other automated systems.
 
 - **Programmatic Payments**: The simple REST API allows agents to execute payments without needing to interact with complex user interfaces or browser extensions.
 - **Reduced Ambiguity**: By eliminating variables like network and asset selection through a clear API flow, agents can make payments reliably without human intervention.
 - **Budgetary Control**: The quoting mechanism allows an agent to confirm the exact cost before committing to a transaction, enabling better financial management.
-- **Universal Standard**: An agent that learns to use the Solis protocol can interact with any merchant that supports it, creating a universal payment method for the autonomous economy.
+- **Universal Standard**: An agent that learns to use the UPP protocol can interact with any merchant that supports it, creating a universal payment method for the autonomous economy.
 
 ## Implementation
 
 The protocol requires implementation by:
 
 1. **Merchants/Payment Processors**: Implementing the required REST API endpoints
-2. **Wallet Providers**: Adding support for the Solis URI scheme and flow
+2. **Wallet Providers**: Adding support for the UPP URI scheme and flow
 
 ## API Endpoints
 
-The Solis protocol defines the following REST API endpoints:
+The Universal Payments Protocol defines the following REST API endpoints:
 
 - `GET /{payment-id}` - Get payment information
 - `GET /assets/{payment-id}` - List supported assets
-- `POST /quote/{payment-id}` - Request payment quote  
+- `POST /quote/{payment-id}` - Request payment quote
 - `POST /intent/{payment-id}` - Create payment intent
-- `POST /notify/{payment-id}` - Transaction notification 
+- `POST /notify/{payment-id}` - Transaction notification
 
 ## Example Payment Flow
 
@@ -80,7 +80,7 @@ The Solis protocol defines the following REST API endpoints:
 
 ## Get Involved
 
-Solis is an open standard that welcomes participation from:
+UPP is an open standard that welcomes participation from:
 
 - Wallet providers
 - Payment processors
@@ -91,4 +91,4 @@ Solis is an open standard that welcomes participation from:
 
 ## License
 
-This specification is available under the MIT License. 
+This specification is available under the MIT License.

@@ -1,24 +1,24 @@
-# Solis Network and Asset Codes
+# UPP Network and Asset Codes
 
 ## Abstract
 
-This document provides a centralized, recommended list of standardized codes for blockchain networks and crypto assets to be used within Solis. Its purpose is to ensure consistency and interoperability among different Solis implementations, minimizing ambiguity when referring to specific networks or assets.
+This document provides a centralized, recommended list of standardized codes for blockchain networks and crypto assets to be used within the Universal Payments Protocol (UPP). Its purpose is to ensure consistency and interoperability among different UPP implementations, minimizing ambiguity when referring to specific networks or assets.
 
 ## Status of This Document
 
-This is an initial draft. This list is expected to evolve and be maintained by the Solis community. Future iterations might include an API for programmatic access to these codes.
+This is an initial draft. This list is expected to evolve and be maintained by the UPP community. Future iterations might include an API for programmatic access to these codes.
 
 ## Introduction
 
-To ensure that terms like "ETHEREUM" for the network or "USDC" for an asset mean the same thing across all Solis-compliant wallets and merchant systems, this document establishes a baseline set of codes. While the Solis specification defines the structure for exchanging payment information, these standardized codes define the *values* for common networks and assets.
+To ensure that terms like "ETHEREUM" for the network or "USDC" for an asset mean the same thing across all UPP-compliant wallets and merchant systems, this document establishes a baseline set of codes. While the UPP specification defines the structure for exchanging payment information, these standardized codes define the *values* for common networks and assets.
 
-Implementers should refer to this document when specifying `network` fields and `asset` fields in Solis API calls and responses.
+Implementers should refer to this document when specifying `network` fields and `asset` fields in UPP API calls and responses.
 
 ## Network Codes
 
-The following table lists the standardized codes for blockchain networks supported by Solis. The `Solis Network Code` should be used in the `network` field of Solis API messages.
+The following table lists the standardized codes for blockchain networks supported by UPP. The `UPP Network Code` should be used in the `network` field of UPP API messages.
 
-| Network Name          | Solis Network Code | Notes                                       |
+| Network Name          | UPP Network Code | Notes                                       |
 |-----------------------|------------------|---------------------------------------------|
 | Bitcoin               | `BITCOIN`        |                                             |
 | Ethereum              | `ETHEREUM`       |                                             |
@@ -36,11 +36,11 @@ The following table lists the standardized codes for blockchain networks support
 
 ## Asset Codes
 
-The following table lists the standardized codes for crypto assets supported by Solis. The `Solis Asset Code` should be used in the `asset` field within Solis API messages. These codes generally correspond to the widely recognized ticker symbol for the asset.
+The following table lists the standardized codes for crypto assets supported by UPP. The `UPP Asset Code` should be used in the `asset` field within UPP API messages. These codes generally correspond to the widely recognized ticker symbol for the asset.
 
-It's important to note that the same asset (e.g., USDC) can exist on multiple networks. The Solis protocol distinguishes these by the combination of the `network` code and the `asset` code, along with the network-specific contract address when applicable.
+It's important to note that the same asset (e.g., USDC) can exist on multiple networks. The UPP protocol distinguishes these by the combination of the `network` code and the `asset` code, along with the network-specific contract address when applicable.
 
-| Asset Name        | Solis Asset Code | Official Website / Source (Informational) |
+| Asset Name        | UPP Asset Code | Official Website / Source (Informational) |
 |-------------------|----------------|-------------------------------------------|
 | Bitcoin           | `BTC`          | bitcoin.org                               |
 | Ether             | `ETH`          | ethereum.org                              |
@@ -85,8 +85,8 @@ To indicate support for Ether on Ethereum:
 
 This list of codes is intended to be a community-maintained resource. To propose additions or changes:
 
-1.  Open an issue in the Solis repository detailing the proposed network or asset code.
+1.  Open an issue in the UPP repository detailing the proposed network or asset code.
 2.  Provide justification, including official sources or widespread community usage for the code.
 3.  A consensus-driven approach will be used to update this document.
 
-The goal is to maintain a practical and widely accepted set of codes that promotes clarity and reduces integration friction for Solis implementers. 
+The goal is to maintain a practical and widely accepted set of codes that promotes clarity and reduces integration friction for UPP implementers.

@@ -1,21 +1,21 @@
 openapi: 3.0.3
 info:
-  title: Solis Payment Protocol API
+  title: Universal Payments Protocol API
   description: |
-    The Solis Payment Protocol is a standardized API specification for payments 
-    that eliminates common user errors such as network mismatch, token mismatch, and incorrect 
+    The Universal Payments Protocol (UPP) is a standardized API specification for payments
+    that eliminates common user errors such as network mismatch, token mismatch, and incorrect
     payment amounts. While the initial focus is blockchain payments but this specification is designed to be adaptable to other novel methods.
   version: 1.0.0
   contact:
-    name: Solis Protocol
+    name: Universal Payments Protocol
     url: https://github.com/solis-money
   license:
     name: MIT License
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: https://api.example.com/solis
-    description: Example Solis Enabled API server
+  - url: https://api.example.com/upp
+    description: Example UPP Enabled API server
 
 paths:
   /{payment-id}:
@@ -23,7 +23,7 @@ paths:
       summary: Get Payment Information
       description: Retrieves basic information about a payment request
       operationId: getPaymentInfo
-      tags: 
+      tags:
         - Payment Information
       parameters:
         - name: payment-id
@@ -75,7 +75,7 @@ paths:
       summary: List Supported Assets
       description: Returns supported cryptocurrency assets and networks for the payment
       operationId: listSupportedAssets
-      tags: 
+      tags:
         - Payment Information
       parameters:
         - name: payment-id
@@ -93,7 +93,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/SupportedAsset'
-                    
+
 
   /quote/{payment-id}:
     post:
@@ -123,7 +123,7 @@ paths:
                   $ref: '#/components/schemas/Network'
                 asset:
                   $ref: '#/components/schemas/Asset'
-                  
+
       responses:
         '200':
           description: Quote generated successfully
@@ -138,11 +138,11 @@ paths:
                   - quote
                   - expiresAt
                 properties:
-                  id: 
+                  id:
                     type: string
                     example: quote_8dZ4MGal82bx
                     description: The quote ID
-                  expiresAt: 
+                  expiresAt:
                     type: integer
                     format: int64
                     example: 1698765432000
@@ -157,7 +157,7 @@ paths:
       summary: Create Payment Intent
       description: Creates a payment intent with transaction parameters
       operationId: createPaymentIntent
-      tags: 
+      tags:
         - Payment Processing
       parameters:
         - name: payment-id
@@ -166,7 +166,7 @@ paths:
           schema:
             type: string
             example: pay_7dZ4MGal82bx
-            
+
       requestBody:
         required: true
         content:
@@ -186,8 +186,8 @@ paths:
                   example: quote_8dZ4MGal82bx
                 compliance:
                   $ref: '#/components/schemas/ComplianceInfo'
-                        
-                    
+
+
       responses:
         '200':
           description: Payment intent created successfully
@@ -208,7 +208,7 @@ paths:
                     $ref: '#/components/schemas/Value'
                   destination:
                     $ref: '#/components/schemas/Destination'
-                
+
 
   /notify/{payment-id}:
     post:
@@ -234,13 +234,13 @@ paths:
                 hash:
                   type: string
                   example: 0x10fe14ae0a6ea8a4e69827b2a72a2a24fd151d2f017ac62943b94351a2e8d935
-                transaction: 
+                transaction:
                   type: string
                   description: The wallet could optionally supply the full signed transaction payload for the service provider to validate and relay.
                 sender:
                   $ref: '#/components/schemas/AddressReference'
-                      
-                  
+
+
       responses:
         '200':
           description: Transaction notification received
@@ -248,7 +248,7 @@ paths:
             application/json:
               schema:
                 type: object
-                
+
 
 components:
   schemas:
@@ -423,23 +423,23 @@ components:
     # POS Mode BLE Message Types (HTTP Proxy over GATT)
     # These schemas define the 4 message types for BLE communication
     # between wallets (Peripheral) and POS terminals (Central) in POS Mode.
-    # The POS acts as an HTTP proxy - SOLIS_REQUEST/SOLIS_RESPONSE carry
+    # The POS acts as an HTTP proxy - UPP_REQUEST/UPP_RESPONSE carry
     # the same JSON bodies as the HTTP API endpoints.
     # See RFC.md "POS Mode (BLE HTTP Proxy)" section for details.
 
     BLEMessageType:
       type: string
       enum:
-        - SOLIS_CONNECT
-        - SOLIS_CLAIM
-        - SOLIS_REQUEST
-        - SOLIS_RESPONSE
-        - SOLIS_ERROR
+        - UPP_CONNECT
+        - UPP_CLAIM
+        - UPP_REQUEST
+        - UPP_RESPONSE
+        - UPP_ERROR
       description: |
         Message types for BLE POS Mode communication (HTTP Proxy model).
         Only 4 core types plus error - the HTTP API schemas are the single source of truth.
 
-    SolisConnect:
+    UPPConnect:
       type: object
       description: |
         Initial connection message from POS to Wallet after BLE connection established.
@@ -456,7 +456,7 @@ components:
       properties:
         type:
           type: string
-          enum: [SOLIS_CONNECT]
+          enum: [UPP_CONNECT]
         version:
           type: string
           example: "1.1"
@@ -495,25 +495,25 @@ components:
             $ref: '#/components/schemas/SupportedAsset'
           description: Supported payment assets/networks
 
-    SolisClaim:
+    UPPClaim:
       type: object
       description: |
         Wallet claims the payment. Sent from Wallet to POS.
         Contains wallet's ECDH public key to complete key exchange.
-        All subsequent messages (SOLIS_REQUEST/SOLIS_RESPONSE) are encrypted.
+        All subsequent messages (UPP_REQUEST/UPP_RESPONSE) are encrypted.
       required:
         - type
         - walletPubkey
       properties:
         type:
           type: string
-          enum: [SOLIS_CLAIM]
+          enum: [UPP_CLAIM]
         walletPubkey:
           type: string
           description: Wallet's ECDH public key (secp256k1, compressed, hex-encoded)
           example: "03f9e8d7c6b5a4..."
 
-    SolisRequest:
+    UPPRequest:
       type: object
       description: |
         HTTP request proxy message from Wallet to POS (encrypted after claim).
@@ -527,7 +527,7 @@ components:
       properties:
         type:
           type: string
-          enum: [SOLIS_REQUEST]
+          enum: [UPP_REQUEST]
         id:
           type: string
           description: Request ID for matching responses
@@ -546,7 +546,7 @@ components:
           description: Request body (same as HTTP API request body)
           example: { "network": "BASE", "asset": "USDC" }
 
-    SolisResponse:
+    UPPResponse:
       type: object
       description: |
         HTTP response proxy message from POS to Wallet (encrypted).
@@ -559,7 +559,7 @@ components:
       properties:
         type:
           type: string
-          enum: [SOLIS_RESPONSE]
+          enum: [UPP_RESPONSE]
         id:
           type: string
           description: Request ID this response is for
@@ -584,7 +584,7 @@ components:
         - BROADCAST_FAILED
       description: Error codes for BLE communication
 
-    SolisBLEError:
+    UPPBLEError:
       type: object
       description: Error message for BLE communication (may be encrypted or unencrypted depending on session state)
       required:
@@ -594,7 +594,7 @@ components:
       properties:
         type:
           type: string
-          enum: [SOLIS_ERROR]
+          enum: [UPP_ERROR]
         code:
           $ref: '#/components/schemas/BLEErrorCode'
         message:
