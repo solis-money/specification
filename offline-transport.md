@@ -1,10 +1,10 @@
-# Solis POS Mode: BLE HTTP Proxy Technical Specification
+# UPP POS Mode: BLE HTTP Proxy Technical Specification
 
-This document provides the complete technical specification for implementing POS Mode using Bluetooth Low Energy (BLE) as an HTTP proxy, enabling Solis payments when the user's wallet has no internet connectivity.
+This document provides the complete technical specification for implementing POS Mode using Bluetooth Low Energy (BLE) as an HTTP proxy, enabling UPP payments when the user's wallet has no internet connectivity.
 
 ## Overview
 
-POS Mode allows a wallet application to complete Solis payments entirely offline by using the POS terminal as an HTTP proxy. The wallet sends standard Solis API requests over BLE, and the POS forwards them to the backend. This design ensures the HTTP API schemas remain the single source of truth.
+POS Mode allows a wallet application to complete UPP payments entirely offline by using the POS terminal as an HTTP proxy. The wallet sends standard UPP API requests over BLE, and the POS forwards them to the backend. This design ensures the HTTP API schemas remain the single source of truth.
 
 ```
 ┌─────────────────┐                    ┌─────────────────┐                    ┌──────────┐
@@ -23,7 +23,7 @@ POS Mode allows a wallet application to complete Solis payments entirely offline
 
 | Device | BLE Role | Responsibilities |
 |--------|----------|------------------|
-| **Wallet** | Peripheral | Advertises Solis service, receives connections, sends HTTP requests |
+| **Wallet** | Peripheral | Advertises UPP service, receives connections, sends HTTP requests |
 | **POS** | Central | Scans for wallets, initiates connections, proxies HTTP requests to backend |
 
 This role assignment is critical for iOS compatibility. iOS does not support NFC Host Card Emulation (HCE), but fully supports BLE Peripheral mode via CoreBluetooth.
@@ -34,13 +34,13 @@ The HTTP Proxy model uses only 4 message types (plus error):
 
 | Type | Direction | Encrypted | Purpose |
 |------|-----------|-----------|---------|
-| `SOLIS_CONNECT` | POS → Wallet | No | Initial payment info + POS session key |
-| `SOLIS_CLAIM` | Wallet → POS | No | Wallet claims payment + wallet session key |
-| `SOLIS_REQUEST` | Wallet → POS | Yes | HTTP request proxy (method, path, body) |
-| `SOLIS_RESPONSE` | POS → Wallet | Yes | HTTP response proxy (status, body) |
-| `SOLIS_ERROR` | Either | Conditional | Transport-level error notification |
+| `UPP_CONNECT` | POS → Wallet | No | Initial payment info + POS session key |
+| `UPP_CLAIM` | Wallet → POS | No | Wallet claims payment + wallet session key |
+| `UPP_REQUEST` | Wallet → POS | Yes | HTTP request proxy (method, path, body) |
+| `UPP_RESPONSE` | POS → Wallet | Yes | HTTP response proxy (status, body) |
+| `UPP_ERROR` | Either | Conditional | Transport-level error notification |
 
-**Key Benefit**: `SOLIS_REQUEST` and `SOLIS_RESPONSE` carry the same JSON bodies as the HTTP API endpoints. No schema duplication.
+**Key Benefit**: `UPP_REQUEST` and `UPP_RESPONSE` carry the same JSON bodies as the HTTP API endpoints. No schema duplication.
 
 ## Transport Layer
 
@@ -59,7 +59,7 @@ The HTTP Proxy model uses only 4 message types (plus error):
 ### GATT Service Definition
 
 ```
-Service: Solis Payment Service
+Service: UPP Payment Service
 UUID: 0000FFF0-0000-1000-8000-00805F9B34FB
 
 Characteristics:
@@ -68,14 +68,14 @@ Characteristics:
      UUID: 0000FFF1-0000-1000-8000-00805F9B34FB
      Properties: Write, Write Without Response
      Permissions: Open
-     Description: POS writes SOLIS_CONNECT and SOLIS_RESPONSE messages here
+     Description: POS writes UPP_CONNECT and UPP_RESPONSE messages here
 
   2. Response Characteristic (Wallet → POS)
      UUID: 0000FFF2-0000-1000-8000-00805F9B34FB
      Properties: Notify, Indicate
      Permissions: Open
      CCCD: Must be enabled after connection
-     Description: Wallet sends SOLIS_CLAIM and SOLIS_REQUEST messages here
+     Description: Wallet sends UPP_CLAIM and UPP_REQUEST messages here
 ```
 
 ### Advertising Configuration
@@ -84,7 +84,7 @@ Characteristics:
 ```
 Flags: 0x06 (LE General Discoverable, BR/EDR Not Supported)
 Complete List of 128-bit Service UUIDs: 0000FFF0-0000-1000-8000-00805F9B34FB
-Local Name: "Solis-XXXXXXXX" (where XXXXXXXX is first 8 chars of rotating wallet ID hash)
+Local Name: "UPP-XXXXXXXX" (where XXXXXXXX is first 8 chars of rotating wallet ID hash)
 ```
 
 **Scan Response (optional):**
@@ -124,16 +124,16 @@ For messages larger than MTU, use length-prefixed framing:
 ### Key Exchange (Broadcast + Claim Model)
 
 1. POS generates ephemeral ECDH key pair (secp256k1) per payment
-2. POS includes public key in `SOLIS_CONNECT`
-3. Wallet includes its public key in `SOLIS_CLAIM`
+2. POS includes public key in `UPP_CONNECT`
+3. Wallet includes its public key in `UPP_CLAIM`
 4. Both derive shared secret using ECDH
-5. All `SOLIS_REQUEST` and `SOLIS_RESPONSE` messages are encrypted
+5. All `UPP_REQUEST` and `UPP_RESPONSE` messages are encrypted
 
 ```
 // Key derivation
 sharedSecret = ECDH(myPrivateKey, theirPublicKey)
 sessionKey = HKDF-SHA256(
-  salt: "solis-ble-v1.1",
+  salt: "upp-ble-v1.1",
   ikm: sharedSecret,
   info: paymentId || posPubkey || walletPubkey,
   length: 32
@@ -142,7 +142,7 @@ sessionKey = HKDF-SHA256(
 
 ### Encryption Specification
 
-All messages after `SOLIS_CLAIM` are encrypted with AES-128-GCM:
+All messages after `UPP_CLAIM` are encrypted with AES-128-GCM:
 
 ```
 ┌──────────┬──────────────┬──────────┐
@@ -169,18 +169,18 @@ All messages are JSON-encoded with a `type` field:
 
 ```json
 {
-  "type": "SOLIS_MESSAGE_TYPE",
+  "type": "UPP_MESSAGE_TYPE",
   ...message fields...
 }
 ```
 
-### SOLIS_CONNECT
+### UPP_CONNECT
 
 Sent by POS to wallet after BLE connection. Bundles payment info and assets to avoid extra round-trips.
 
 ```typescript
-interface SolisConnect {
-  type: "SOLIS_CONNECT";
+interface UPPConnect {
+  type: "UPP_CONNECT";
   version: string;              // Protocol version (e.g., "1.1")
   paymentId: string;            // Unique payment identifier
   posPubkey: string;            // ECDH public key (secp256k1, compressed, hex)
@@ -206,7 +206,7 @@ interface SolisConnect {
 **Example:**
 ```json
 {
-  "type": "SOLIS_CONNECT",
+  "type": "UPP_CONNECT",
   "version": "1.1",
   "paymentId": "pos_abc123",
   "posPubkey": "02a1b2c3d4e5f6789abcdef0123456789abcdef01234567",
@@ -238,13 +238,13 @@ interface SolisConnect {
 }
 ```
 
-### SOLIS_CLAIM
+### UPP_CLAIM
 
 Sent by wallet to claim the payment and establish encrypted session.
 
 ```typescript
-interface SolisClaim {
-  type: "SOLIS_CLAIM";
+interface UPPClaim {
+  type: "UPP_CLAIM";
   walletPubkey: string;         // Wallet's ECDH public key (compressed, hex)
 }
 ```
@@ -252,18 +252,18 @@ interface SolisClaim {
 **Example:**
 ```json
 {
-  "type": "SOLIS_CLAIM",
+  "type": "UPP_CLAIM",
   "walletPubkey": "03fedcba9876543210fedcba9876543210fedcba98765432"
 }
 ```
 
-### SOLIS_REQUEST
+### UPP_REQUEST
 
 Generic HTTP request proxy from wallet to POS. Encrypted after claim.
 
 ```typescript
-interface SolisRequest {
-  type: "SOLIS_REQUEST";
+interface UPPRequest {
+  type: "UPP_REQUEST";
   id: string;                   // Request ID for matching responses
   method: "GET" | "POST";       // HTTP method
   path: string;                 // API path (e.g., "/quote/pos_123")
@@ -274,7 +274,7 @@ interface SolisRequest {
 **Example (Quote Request):**
 ```json
 {
-  "type": "SOLIS_REQUEST",
+  "type": "UPP_REQUEST",
   "id": "req_001",
   "method": "POST",
   "path": "/quote/pos_abc123",
@@ -288,7 +288,7 @@ interface SolisRequest {
 **Example (Intent Request):**
 ```json
 {
-  "type": "SOLIS_REQUEST",
+  "type": "UPP_REQUEST",
   "id": "req_002",
   "method": "POST",
   "path": "/intent/pos_abc123",
@@ -303,7 +303,7 @@ interface SolisRequest {
 **Example (Notify with Transaction):**
 ```json
 {
-  "type": "SOLIS_REQUEST",
+  "type": "UPP_REQUEST",
   "id": "req_003",
   "method": "POST",
   "path": "/notify/pos_abc123",
@@ -317,13 +317,13 @@ interface SolisRequest {
 }
 ```
 
-### SOLIS_RESPONSE
+### UPP_RESPONSE
 
 Generic HTTP response proxy from POS to wallet. Encrypted.
 
 ```typescript
-interface SolisResponse {
-  type: "SOLIS_RESPONSE";
+interface UPPResponse {
+  type: "UPP_RESPONSE";
   id: string;                   // Matches request ID
   status: number;               // HTTP status code
   body?: object;                // Response body (same as HTTP API)
@@ -333,7 +333,7 @@ interface SolisResponse {
 **Example (Quote Response):**
 ```json
 {
-  "type": "SOLIS_RESPONSE",
+  "type": "UPP_RESPONSE",
   "id": "req_001",
   "status": 200,
   "body": {
@@ -351,7 +351,7 @@ interface SolisResponse {
 **Example (Error Response):**
 ```json
 {
-  "type": "SOLIS_RESPONSE",
+  "type": "UPP_RESPONSE",
   "id": "req_001",
   "status": 409,
   "body": {
@@ -363,13 +363,13 @@ interface SolisResponse {
 }
 ```
 
-### SOLIS_ERROR
+### UPP_ERROR
 
 Transport-level error (BLE session issues, proxy failures).
 
 ```typescript
-interface SolisError {
-  type: "SOLIS_ERROR";
+interface UPPError {
+  type: "UPP_ERROR";
   code: string;
   message: string;
 }
@@ -389,7 +389,7 @@ interface SolisError {
 **Example:**
 ```json
 {
-  "type": "SOLIS_ERROR",
+  "type": "UPP_ERROR",
   "code": "PAYMENT_CLAIMED",
   "message": "This payment has already been claimed by another wallet"
 }
@@ -432,7 +432,7 @@ interface SolisError {
 **Pseudocode:**
 
 ```python
-class SolisPOSController:
+class UPPPOSController:
     def __init__(self):
         self.ble = BLECentral()
         self.http = HTTPClient()
@@ -455,9 +455,9 @@ class SolisPOSController:
             keypair=keypair
         )
 
-        # Start scanning for Solis wallets
+        # Start scanning for UPP wallets
         self.ble.start_scan(
-            service_uuid=SOLIS_SERVICE_UUID,
+            service_uuid=UPP_SERVICE_UUID,
             rssi_threshold=-65
         )
 
@@ -468,9 +468,9 @@ class SolisPOSController:
         # Subscribe to response characteristic
         connection.subscribe(RESPONSE_CHAR_UUID, self.on_wallet_message)
 
-        # Send SOLIS_CONNECT (bundled payment + assets)
+        # Send UPP_CONNECT (bundled payment + assets)
         connect_msg = {
-            "type": "SOLIS_CONNECT",
+            "type": "UPP_CONNECT",
             "version": "1.1",
             "paymentId": self.current_payment.id,
             "posPubkey": self.current_payment.keypair.public_hex,
@@ -502,9 +502,9 @@ class SolisPOSController:
         else:
             message = json.loads(data)
 
-        if message["type"] == "SOLIS_CLAIM":
+        if message["type"] == "UPP_CLAIM":
             self.handle_claim(session, message)
-        elif message["type"] == "SOLIS_REQUEST":
+        elif message["type"] == "UPP_REQUEST":
             self.handle_request(session, message)
 
     def handle_claim(self, session: Session, message: dict):
@@ -551,7 +551,7 @@ class SolisPOSController:
                     body["hash"] = tx_hash
 
             response = {
-                "type": "SOLIS_RESPONSE",
+                "type": "UPP_RESPONSE",
                 "id": request_id,
                 "status": 200,
                 "body": result
@@ -559,7 +559,7 @@ class SolisPOSController:
 
         except HTTPError as e:
             response = {
-                "type": "SOLIS_RESPONSE",
+                "type": "UPP_RESPONSE",
                 "id": request_id,
                 "status": e.status_code,
                 "body": e.body
@@ -567,7 +567,7 @@ class SolisPOSController:
 
         except Exception as e:
             response = {
-                "type": "SOLIS_RESPONSE",
+                "type": "UPP_RESPONSE",
                 "id": request_id,
                 "status": 500,
                 "body": {
@@ -586,7 +586,7 @@ class SolisPOSController:
 
     def send_error(self, session: Session, code: str, message: str):
         error = {
-            "type": "SOLIS_ERROR",
+            "type": "UPP_ERROR",
             "code": code,
             "message": message
         }
@@ -616,7 +616,7 @@ class SolisPOSController:
 **Pseudocode:**
 
 ```python
-class SolisWallet:
+class UPPWallet:
     def __init__(self):
         self.ble = BLEPeripheral()
         self.keychain = SecureKeychain()
@@ -628,7 +628,7 @@ class SolisWallet:
         wallet_id_hash = sha256(self.keychain.primary_address)[:8]
 
         # Set up GATT service
-        self.ble.add_service(SOLIS_SERVICE_UUID)
+        self.ble.add_service(UPP_SERVICE_UUID)
         self.ble.add_characteristic(
             REQUEST_CHAR_UUID,
             properties=["write", "writeWithoutResponse"],
@@ -641,8 +641,8 @@ class SolisWallet:
 
         # Start advertising
         self.ble.start_advertising(
-            service_uuids=[SOLIS_SERVICE_UUID],
-            local_name=f"Solis-{wallet_id_hash}"
+            service_uuids=[UPP_SERVICE_UUID],
+            local_name=f"UPP-{wallet_id_hash}"
         )
 
         self.ui.show_waiting_for_pos()
@@ -654,11 +654,11 @@ class SolisWallet:
         else:
             message = json.loads(data)
 
-        if message["type"] == "SOLIS_CONNECT":
+        if message["type"] == "UPP_CONNECT":
             self.handle_connect(central_id, message)
-        elif message["type"] == "SOLIS_RESPONSE":
+        elif message["type"] == "UPP_RESPONSE":
             self.handle_response(message)
-        elif message["type"] == "SOLIS_ERROR":
+        elif message["type"] == "UPP_ERROR":
             self.handle_error(message)
 
     def handle_connect(self, central_id: str, message: dict):
@@ -695,7 +695,7 @@ class SolisWallet:
 
         # Send claim (unencrypted - establishes session)
         claim = {
-            "type": "SOLIS_CLAIM",
+            "type": "UPP_CLAIM",
             "walletPubkey": keypair.public_hex
         }
         self.ble.notify(RESPONSE_CHAR_UUID, json.dumps(claim))
@@ -774,7 +774,7 @@ class SolisWallet:
     def send_request(self, method: str, path: str, body: dict = None):
         self.request_counter += 1
         request = {
-            "type": "SOLIS_REQUEST",
+            "type": "UPP_REQUEST",
             "id": f"req_{self.request_counter:03d}",
             "method": method,
             "path": path
@@ -858,9 +858,9 @@ class SolisWallet:
 |-------|--------|-------|
 | BLE Discovery | 50ms | 20-30ms advertising interval |
 | Connection | 50ms | Optimized connection parameters |
-| SOLIS_CONNECT Delivery | 50ms | Pre-fetched data bundled |
+| UPP_CONNECT Delivery | 50ms | Pre-fetched data bundled |
 | User Review | Variable | User-dependent |
-| SOLIS_CLAIM + Key Exchange | 30ms | Local computation |
+| UPP_CLAIM + Key Exchange | 30ms | Local computation |
 | Quote Request/Response | 60ms | Backend latency included |
 | Intent Request/Response | 60ms | Backend latency included |
 | Signing | 20ms | Local computation |
@@ -869,7 +869,7 @@ class SolisWallet:
 
 ### Optimization Techniques
 
-1. **Pre-fetch + Bundle**: POS fetches payment info and assets before any wallet connects, bundles in SOLIS_CONNECT
+1. **Pre-fetch + Bundle**: POS fetches payment info and assets before any wallet connects, bundles in UPP_CONNECT
 2. **Fast Advertising**: 20-30ms interval during active payment
 3. **Connection Parameters**: 7.5-15ms connection interval, 0 slave latency
 4. **Message Pipelining**: Wallet sends quote request immediately after claim
@@ -879,7 +879,7 @@ class SolisWallet:
 ### Test Scenarios
 
 1. **Happy Path**: Complete payment with single wallet
-2. **Multi-Wallet**: Multiple wallets receive SOLIS_CONNECT, one claims
+2. **Multi-Wallet**: Multiple wallets receive UPP_CONNECT, one claims
 3. **Claim Race**: Two wallets attempt to claim simultaneously
 4. **Connection Loss**: BLE disconnect during flow
 5. **Session Timeout**: 2+ minutes between steps

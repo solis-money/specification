@@ -1,6 +1,6 @@
-# Solis Implementation Examples
+# UPP Implementation Examples
 
-This document provides practical examples of Solis implementation.
+This document provides practical examples of Universal Payments Protocol (UPP) implementation.
 
 ## Example 1: E-commerce Checkout
 
@@ -25,12 +25,12 @@ The merchant backend creates a payment request with a unique ID:
 }
 ```
 
-2. **Create Solis URI**
+2. **Create UPP URI**
 
-The merchant generates a Solis URI:
+The merchant generates a UPP URI:
 
 ```
-solis://pay_AB12CD34EF56?endpoint=https://store.example.com/api/payments&options=version=1.0,expiry=1698765432
+upp://pay_AB12CD34EF56?endpoint=https://store.example.com/api/payments&options=version=1.0,expiry=1698765432
 ```
 
 3. **Display QR Code**
@@ -39,7 +39,7 @@ The URI is encoded into a QR code and displayed on the checkout page.
 
 4. **User Scans QR Code**
 
-The user scans the QR code with their wallet app, which recognizes the Solis protocol.
+The user scans the QR code with their wallet app, which recognizes the UPP protocol.
 
 5. **Query Payment Information**
 
@@ -247,7 +247,7 @@ The point-of-sale system creates a payment request for a $5 coffee:
 The POS terminal displays a QR code containing:
 
 ```
-solis://pos_123456?endpoint=https://payments.coffeeshop.com/api&options=version=1.0,expiry=1698765432
+upp://pos_123456?endpoint=https://payments.coffeeshop.com/api&options=version=1.0,expiry=1698765432
 ```
 
 3. **Workflow Continues**
@@ -448,7 +448,7 @@ The user chooses to pay with USDC on Polygon (perhaps for lower fees).
 
 The payment flow continues with the user's selected network/asset combination.
 
-These examples demonstrate the flexibility and error-handling capabilities of the Solis protocol across different payment scenarios.
+These examples demonstrate the flexibility and error-handling capabilities of the UPP protocol across different payment scenarios.
 
 ## Example 6: WalletConnect Integration
 
@@ -480,9 +480,9 @@ The checkout page displays both QR code and "Connect Wallet" options:
 <div class="payment-methods">
   <div class="qr-payment">
     <h3>Scan to Pay</h3>
-    <qr-code data="solis://pay_WC78CD90EF12?endpoint=https://store.example.com/api/payments&options=version=1.0,expiry=1698765432"></qr-code>
+    <qr-code data="upp://pay_WC78CD90EF12?endpoint=https://store.example.com/api/payments&options=version=1.0,expiry=1698765432"></qr-code>
   </div>
-  
+
   <div class="wallet-connect">
     <h3>Connect Wallet</h3>
     <button id="connect-wallet">Connect Wallet</button>
@@ -502,10 +502,10 @@ const connectWallet = async () => {
   try {
     // Initialize WalletConnect session
     const session = await web3Modal.open()
-    
+
     if (session) {
-      // Session established, proceed with Solis payment
-      initiateSolisPayment()
+      // Session established, proceed with UPP payment
+      initiateUPPPayment()
     }
   } catch (error) {
     console.error('WalletConnect failed:', error)
@@ -518,29 +518,29 @@ const connectWallet = async () => {
 Once connected, the merchant can identify the user's wallet address and proceed with payment:
 
 ```javascript
-const initiateSolisPayment = async () => {
+const initiateUPPPayment = async () => {
   const walletAddress = await getAccount()
-  
-  // Send Solis payment request to connected wallet
+
+  // Send UPP payment request to connected wallet
   const paymentRequest = {
-    protocol: 'solis',
+    protocol: 'upp',
     version: '1.0',
     paymentId: 'pay_WC78CD90EF12',
     endpoint: 'https://store.example.com/api/payments',
     walletAddress: walletAddress
   }
-  
+
   // Send request through WalletConnect
   await sendCustomRequest({
-    method: 'solis_paymentRequest',
+    method: 'upp_paymentRequest',
     params: [paymentRequest]
   })
 }
 ```
 
-5. **Wallet Receives Solis Payment Request**
+5. **Wallet Receives UPP Payment Request**
 
-The connected wallet receives the Solis payment request through WalletConnect and automatically fetches payment details:
+The connected wallet receives the UPP payment request through WalletConnect and automatically fetches payment details:
 
 ```
 GET https://store.example.com/api/payments/pay_WC78CD90EF12
@@ -614,7 +614,7 @@ User approves payment in wallet. The wallet sends confirmation back to merchant 
 ```javascript
 // Wallet sends response back through WalletConnect
 const response = {
-  method: 'solis_paymentResponse',
+  method: 'upp_paymentResponse',
   result: {
     approved: true,
     network: 'BASE',
@@ -626,11 +626,11 @@ const response = {
 await sendCustomResponse(response)
 ```
 
-9. **Continue with Standard Solis Flow**
+9. **Continue with Standard UPP Flow**
 
-The payment now continues with the standard Solis flow:
+The payment now continues with the standard UPP flow:
 - Quote request
-- Payment intent creation  
+- Payment intent creation
 - Transaction execution
 - Confirmation
 
@@ -641,7 +641,7 @@ Since WalletConnect maintains the connection, the merchant can provide real-time
 ```javascript
 // Merchant sends transaction status updates
 await sendCustomRequest({
-  method: 'solis_paymentStatus',
+  method: 'upp_paymentStatus',
   params: [{
     paymentId: 'pay_WC78CD90EF12',
     status: 'CONFIRMED',
@@ -663,12 +663,12 @@ await sendCustomRequest({
 ### Implementation Considerations
 
 - **Fallback Support**: Always provide QR code option for mobile-first users
-- **Session Management**: Handle connection timeouts and reconnection gracefully  
+- **Session Management**: Handle connection timeouts and reconnection gracefully
 - **Error Handling**: Manage WalletConnect failures with appropriate fallbacks
-- **Protocol Extensions**: Define custom WalletConnect methods for Solis integration
+- **Protocol Extensions**: Define custom WalletConnect methods for UPP integration
 - **Cross-Chain**: WalletConnect naturally supports multi-chain wallet selection
 
-This integration combines the best of both protocols: WalletConnect's seamless connectivity with Solis's structured payment flow.
+This integration combines the best of both protocols: WalletConnect's seamless connectivity with UPP's structured payment flow.
 
 ## Example 7: POS Mode with BLE (Offline Wallet)
 
@@ -682,7 +682,7 @@ A customer is paying at a retail store. Their phone has poor or no cellular conn
 
 ### Architecture: HTTP Proxy over GATT
 
-The POS terminal acts as an HTTP proxy - the wallet sends standard Solis API requests over BLE, and the POS forwards them to the backend. This ensures the HTTP API schemas remain the single source of truth.
+The POS terminal acts as an HTTP proxy - the wallet sends standard UPP API requests over BLE, and the POS forwards them to the backend. This ensures the HTTP API schemas remain the single source of truth.
 
 ```
 ┌─────────────────┐                    ┌─────────────────┐                    ┌──────────┐
@@ -692,15 +692,15 @@ The POS terminal acts as an HTTP proxy - the wallet sends standard Solis API req
 └─────────────────┘                    └─────────────────┘                    └──────────┘
 ```
 
-**Key Design Principle**: Only 4 message types are needed. `SOLIS_REQUEST` and `SOLIS_RESPONSE` carry the same JSON bodies as the HTTP API endpoints.
+**Key Design Principle**: Only 4 message types are needed. `UPP_REQUEST` and `UPP_RESPONSE` carry the same JSON bodies as the HTTP API endpoints.
 
 | Message Type | Direction | Purpose |
 |--------------|-----------|---------|
-| `SOLIS_CONNECT` | POS → Wallet | Initial payment info + assets (bundled) |
-| `SOLIS_CLAIM` | Wallet → POS | Wallet claims payment, establishes encryption |
-| `SOLIS_REQUEST` | Wallet → POS | Generic HTTP request proxy |
-| `SOLIS_RESPONSE` | POS → Wallet | Generic HTTP response proxy |
-| `SOLIS_ERROR` | Either | Error notification |
+| `UPP_CONNECT` | POS → Wallet | Initial payment info + assets (bundled) |
+| `UPP_CLAIM` | Wallet → POS | Wallet claims payment, establishes encryption |
+| `UPP_REQUEST` | Wallet → POS | Generic HTTP request proxy |
+| `UPP_RESPONSE` | POS → Wallet | Generic HTTP response proxy |
+| `UPP_ERROR` | Either | Error notification |
 
 ### Implementation Steps
 
@@ -720,26 +720,26 @@ The POS terminal creates a payment request for a $25 purchase:
 
 2. **Wallet Enters Payment Mode**
 
-User opens wallet app and enables "Pay at Store" mode. The wallet starts advertising as a BLE Peripheral with the Solis service UUID:
+User opens wallet app and enables "Pay at Store" mode. The wallet starts advertising as a BLE Peripheral with the UPP service UUID:
 
 ```javascript
-// Wallet advertises Solis payment service
-const SOLIS_SERVICE_UUID = "0000FFF0-0000-1000-8000-00805F9B34FB"
+// Wallet advertises UPP payment service
+const UPP_SERVICE_UUID = "0000FFF0-0000-1000-8000-00805F9B34FB"
 
 await BLE.startAdvertising({
-  serviceUUIDs: [SOLIS_SERVICE_UUID],
-  localName: "Solis-" + walletIdHash.substring(0, 8)
+  serviceUUIDs: [UPP_SERVICE_UUID],
+  localName: "UPP-" + walletIdHash.substring(0, 8)
 })
 ```
 
 3. **POS Scans and Connects**
 
-POS scans for nearby Solis-enabled wallets. Multiple wallets may be advertising:
+POS scans for nearby UPP-enabled wallets. Multiple wallets may be advertising:
 
 ```javascript
-// POS scans for Solis peripherals
+// POS scans for UPP peripherals
 const nearbyWallets = await BLE.scan({
-  serviceUUIDs: [SOLIS_SERVICE_UUID],
+  serviceUUIDs: [UPP_SERVICE_UUID],
   rssiThreshold: -65  // Only devices within ~1-2 meters
 })
 
@@ -749,13 +749,13 @@ for (const wallet of nearbyWallets) {
 }
 ```
 
-4. **POS Sends SOLIS_CONNECT**
+4. **POS Sends UPP_CONNECT**
 
 POS sends the bundled payment information to all connected wallets. This includes payment details and supported assets (pre-fetched from backend):
 
 ```json
 {
-  "type": "SOLIS_CONNECT",
+  "type": "UPP_CONNECT",
   "version": "1.1",
   "paymentId": "pos_BLE_789",
   "posPubkey": "02a1b2c3d4e5f6789abcdef0123456789abcdef01234567",
@@ -805,18 +805,18 @@ All nearby wallets receive the payment info and display it. **Only the actual cu
 └─────────────────────────────────────┘
 ```
 
-6. **Wallet Sends SOLIS_CLAIM**
+6. **Wallet Sends UPP_CLAIM**
 
 The paying customer's wallet sends a claim message with its ECDH public key:
 
 ```json
 {
-  "type": "SOLIS_CLAIM",
+  "type": "UPP_CLAIM",
   "walletPubkey": "03fedcba9876543210fedcba9876543210fedcba98765432"
 }
 ```
 
-Both devices derive a shared secret using ECDH (secp256k1). All subsequent messages (`SOLIS_REQUEST`/`SOLIS_RESPONSE`) are encrypted with AES-128-GCM.
+Both devices derive a shared secret using ECDH (secp256k1). All subsequent messages (`UPP_REQUEST`/`UPP_RESPONSE`) are encrypted with AES-128-GCM.
 
 POS disconnects from other wallets and displays:
 ```
@@ -824,13 +824,13 @@ Payment claimed
 Processing...
 ```
 
-7. **Quote Request via SOLIS_REQUEST (Encrypted)**
+7. **Quote Request via UPP_REQUEST (Encrypted)**
 
 Wallet sends a quote request using the generic HTTP proxy message:
 
 ```json
 {
-  "type": "SOLIS_REQUEST",
+  "type": "UPP_REQUEST",
   "id": "req_001",
   "method": "POST",
   "path": "/quote/pos_BLE_789",
@@ -845,7 +845,7 @@ POS forwards to backend (`POST /quote/pos_BLE_789`) and returns:
 
 ```json
 {
-  "type": "SOLIS_RESPONSE",
+  "type": "UPP_RESPONSE",
   "id": "req_001",
   "status": 200,
   "body": {
@@ -860,13 +860,13 @@ POS forwards to backend (`POST /quote/pos_BLE_789`) and returns:
 }
 ```
 
-8. **Intent Request via SOLIS_REQUEST (Encrypted)**
+8. **Intent Request via UPP_REQUEST (Encrypted)**
 
 Wallet requests payment intent:
 
 ```json
 {
-  "type": "SOLIS_REQUEST",
+  "type": "UPP_REQUEST",
   "id": "req_002",
   "method": "POST",
   "path": "/intent/pos_BLE_789",
@@ -882,7 +882,7 @@ POS returns destination address:
 
 ```json
 {
-  "type": "SOLIS_RESPONSE",
+  "type": "UPP_RESPONSE",
   "id": "req_002",
   "status": 200,
   "body": {
@@ -921,13 +921,13 @@ const tx = {
 const signedTx = await wallet.signTransaction(tx)
 ```
 
-10. **Wallet Notifies via SOLIS_REQUEST (Encrypted)**
+10. **Wallet Notifies via UPP_REQUEST (Encrypted)**
 
 Wallet sends signed transaction to POS for broadcast:
 
 ```json
 {
-  "type": "SOLIS_REQUEST",
+  "type": "UPP_REQUEST",
   "id": "req_003",
   "method": "POST",
   "path": "/notify/pos_BLE_789",
@@ -947,7 +947,7 @@ POS broadcasts to blockchain and sends confirmation:
 
 ```json
 {
-  "type": "SOLIS_RESPONSE",
+  "type": "UPP_RESPONSE",
   "id": "req_003",
   "status": 200,
   "body": {}
@@ -966,9 +966,9 @@ POS broadcasts to blockchain and sends confirmation:
 | Phase | Duration | Cumulative |
 |-------|----------|------------|
 | BLE Advertisement → POS Detection | ~50ms | 50ms |
-| POS Connect + SOLIS_CONNECT | ~100ms | 150ms |
+| POS Connect + UPP_CONNECT | ~100ms | 150ms |
 | User Reviews + Taps "Pay" | User action | - |
-| SOLIS_CLAIM + ECDH Key Exchange | ~30ms | 180ms |
+| UPP_CLAIM + ECDH Key Exchange | ~30ms | 180ms |
 | Quote Request/Response | ~60ms | 240ms |
 | Intent Request/Response | ~60ms | 300ms |
 | Sign Transaction (local) | ~20ms | 320ms |
@@ -982,34 +982,34 @@ POS broadcasts to blockchain and sends confirmation:
 Customer Wallet                    POS Terminal                     Backend
 (BLE Peripheral)                   (BLE Central)
      │                                  │                              │
-     │◄═══ Advertise Solis Service ════►│                              │
+     │◄═══ Advertise UPP Service ══════►│                              │
      │                                  │                              │
      │◄──────── BLE Connect ───────────►│                              │
      │                                  │                              │
-     │◄── SOLIS_CONNECT ────────────────│  (payment + assets bundled)  │
+     │◄── UPP_CONNECT ──────────────────│  (payment + assets bundled)  │
      │                                  │                              │
      │   [User reviews, taps "Pay"]     │                              │
      │                                  │                              │
-     │─── SOLIS_CLAIM ─────────────────►│                              │
+     │─── UPP_CLAIM ───────────────────►│                              │
      │      (+ walletPubkey)            │   [POS disconnects others]   │
      │                                  │                              │
      │═══════ Encrypted Channel ════════│                              │
      │                                  │                              │
-     │─── SOLIS_REQUEST ───────────────►│──── POST /quote/... ────────►│
+     │─── UPP_REQUEST ─────────────────►│──── POST /quote/... ────────►│
      │     {method: POST, path: /quote} │                              │
-     │◄── SOLIS_RESPONSE ───────────────│◄─── Quote ───────────────────│
+     │◄── UPP_RESPONSE ─────────────────│◄─── Quote ───────────────────│
      │     {status: 200, body: {...}}   │                              │
      │                                  │                              │
-     │─── SOLIS_REQUEST ───────────────►│──── POST /intent/... ───────►│
+     │─── UPP_REQUEST ─────────────────►│──── POST /intent/... ───────►│
      │     {method: POST, path: /intent}│                              │
-     │◄── SOLIS_RESPONSE ───────────────│◄─── Destination Address ─────│
+     │◄── UPP_RESPONSE ─────────────────│◄─── Destination Address ─────│
      │     {status: 200, body: {...}}   │                              │
      │                                  │                              │
      │   [Wallet signs tx locally]      │                              │
      │                                  │                              │
-     │─── SOLIS_REQUEST ───────────────►│──── Broadcast + Notify ─────►│
+     │─── UPP_REQUEST ─────────────────►│──── Broadcast + Notify ─────►│
      │     {method: POST, path: /notify}│                              │
-     │◄── SOLIS_RESPONSE ───────────────│◄─── Success ─────────────────│
+     │◄── UPP_RESPONSE ─────────────────│◄─── Success ─────────────────│
      │     {status: 200, body: {}}      │                              │
      │                                  │                              │
      ▼                                  ▼                              ▼
@@ -1017,12 +1017,12 @@ Customer Wallet                    POS Terminal                     Backend
 
 ### Error Handling
 
-Errors are returned via `SOLIS_RESPONSE` with appropriate HTTP status codes, or via `SOLIS_ERROR` for transport-level issues:
+Errors are returned via `UPP_RESPONSE` with appropriate HTTP status codes, or via `UPP_ERROR` for transport-level issues:
 
-**HTTP-level error (in SOLIS_RESPONSE):**
+**HTTP-level error (in UPP_RESPONSE):**
 ```json
 {
-  "type": "SOLIS_RESPONSE",
+  "type": "UPP_RESPONSE",
   "id": "req_001",
   "status": 409,
   "body": {
@@ -1034,10 +1034,10 @@ Errors are returned via `SOLIS_RESPONSE` with appropriate HTTP status codes, or 
 }
 ```
 
-**Transport-level error (SOLIS_ERROR):**
+**Transport-level error (UPP_ERROR):**
 ```json
 {
-  "type": "SOLIS_ERROR",
+  "type": "UPP_ERROR",
   "code": "SESSION_EXPIRED",
   "message": "BLE session has expired. Please reconnect."
 }
@@ -1051,7 +1051,7 @@ BLE-specific error codes:
 
 ### Security Notes
 
-1. **ECDH Key Exchange**: Session encryption established after SOLIS_CLAIM prevents eavesdropping
+1. **ECDH Key Exchange**: Session encryption established after UPP_CLAIM prevents eavesdropping
 2. **Broadcast + Claim**: User self-selection resolves multi-wallet ambiguity naturally
 3. **RSSI Filtering**: POS only connects to devices within ~1-2 meters (-65 dBm threshold)
 4. **Signed Transaction**: POS only receives signed tx - cannot modify or forge
