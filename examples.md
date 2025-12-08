@@ -668,4 +668,417 @@ await sendCustomRequest({
 - **Protocol Extensions**: Define custom WalletConnect methods for Solis integration
 - **Cross-Chain**: WalletConnect naturally supports multi-chain wallet selection
 
-This integration combines the best of both protocols: WalletConnect's seamless connectivity with Solis's structured payment flow. 
+This integration combines the best of both protocols: WalletConnect's seamless connectivity with Solis's structured payment flow.
+
+## Example 7: POS Mode with BLE (Offline Wallet)
+
+### Scenario
+A customer is paying at a retail store. Their phone has poor or no cellular connectivity inside the store, but the POS terminal has a stable internet connection. The payment is completed entirely via Bluetooth Low Energy (BLE) without the wallet needing internet access.
+
+### Prerequisites
+- POS terminal with BLE capability (acts as BLE Central)
+- Wallet app with BLE support (acts as BLE Peripheral) - works on both iOS and Android
+- POS terminal connected to internet
+
+### Architecture: HTTP Proxy over GATT
+
+The POS terminal acts as an HTTP proxy - the wallet sends standard Solis API requests over BLE, and the POS forwards them to the backend. This ensures the HTTP API schemas remain the single source of truth.
+
+```
+┌─────────────────┐                    ┌─────────────────┐                    ┌──────────┐
+│     WALLET      │        BLE         │       POS       │       HTTPS        │ Backend  │
+│   (Peripheral)  │◄──────────────────►│    (Central)    │◄──────────────────►│          │
+│    [offline]    │   HTTP Proxy       │    [online]     │   Same API calls   │          │
+└─────────────────┘                    └─────────────────┘                    └──────────┘
+```
+
+**Key Design Principle**: Only 4 message types are needed. `SOLIS_REQUEST` and `SOLIS_RESPONSE` carry the same JSON bodies as the HTTP API endpoints.
+
+| Message Type | Direction | Purpose |
+|--------------|-----------|---------|
+| `SOLIS_CONNECT` | POS → Wallet | Initial payment info + assets (bundled) |
+| `SOLIS_CLAIM` | Wallet → POS | Wallet claims payment, establishes encryption |
+| `SOLIS_REQUEST` | Wallet → POS | Generic HTTP request proxy |
+| `SOLIS_RESPONSE` | POS → Wallet | Generic HTTP response proxy |
+| `SOLIS_ERROR` | Either | Error notification |
+
+### Implementation Steps
+
+1. **POS Creates Payment Request**
+
+The POS terminal creates a payment request for a $25 purchase:
+
+```json
+{
+  "paymentId": "pos_BLE_789",
+  "amount": "25.00",
+  "currency": "USD",
+  "merchantId": "retail_store_001",
+  "expiresAt": 1698765432000
+}
+```
+
+2. **Wallet Enters Payment Mode**
+
+User opens wallet app and enables "Pay at Store" mode. The wallet starts advertising as a BLE Peripheral with the Solis service UUID:
+
+```javascript
+// Wallet advertises Solis payment service
+const SOLIS_SERVICE_UUID = "0000FFF0-0000-1000-8000-00805F9B34FB"
+
+await BLE.startAdvertising({
+  serviceUUIDs: [SOLIS_SERVICE_UUID],
+  localName: "Solis-" + walletIdHash.substring(0, 8)
+})
+```
+
+3. **POS Scans and Connects**
+
+POS scans for nearby Solis-enabled wallets. Multiple wallets may be advertising:
+
+```javascript
+// POS scans for Solis peripherals
+const nearbyWallets = await BLE.scan({
+  serviceUUIDs: [SOLIS_SERVICE_UUID],
+  rssiThreshold: -65  // Only devices within ~1-2 meters
+})
+
+// Connect to all nearby wallets
+for (const wallet of nearbyWallets) {
+  await BLE.connect(wallet.id)
+}
+```
+
+4. **POS Sends SOLIS_CONNECT**
+
+POS sends the bundled payment information to all connected wallets. This includes payment details and supported assets (pre-fetched from backend):
+
+```json
+{
+  "type": "SOLIS_CONNECT",
+  "version": "1.1",
+  "paymentId": "pos_BLE_789",
+  "posPubkey": "02a1b2c3d4e5f6789abcdef0123456789abcdef01234567",
+  "merchant": "Retail Store",
+  "payment": {
+    "description": "In-store purchase",
+    "value": {
+      "amount": "25.00",
+      "asset": "USD"
+    },
+    "expiresAt": 1698765432000
+  },
+  "assets": [
+    {
+      "network": "BASE",
+      "asset": "USDC",
+      "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "decimals": 6,
+      "time": 2000
+    },
+    {
+      "network": "POLYGON",
+      "asset": "USDC",
+      "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+      "decimals": 6,
+      "time": 5000
+    }
+  ]
+}
+```
+
+5. **User Self-Selects (Broadcast + Claim)**
+
+All nearby wallets receive the payment info and display it. **Only the actual customer** taps "Pay" on their device. This resolves the multi-wallet ambiguity:
+
+```
+┌─────────────────────────────────────┐
+│         Retail Store                │
+│         $25.00 USD                  │
+│         In-store purchase           │
+├─────────────────────────────────────┤
+│  Pay with:                          │
+│  ○ USDC on Base (~2s, $0.01 fee)    │
+│  ○ USDC on Polygon (~5s, $0.02)     │
+├─────────────────────────────────────┤
+│         [ PAY $25.00 ]              │
+└─────────────────────────────────────┘
+```
+
+6. **Wallet Sends SOLIS_CLAIM**
+
+The paying customer's wallet sends a claim message with its ECDH public key:
+
+```json
+{
+  "type": "SOLIS_CLAIM",
+  "walletPubkey": "03fedcba9876543210fedcba9876543210fedcba98765432"
+}
+```
+
+Both devices derive a shared secret using ECDH (secp256k1). All subsequent messages (`SOLIS_REQUEST`/`SOLIS_RESPONSE`) are encrypted with AES-128-GCM.
+
+POS disconnects from other wallets and displays:
+```
+Payment claimed
+Processing...
+```
+
+7. **Quote Request via SOLIS_REQUEST (Encrypted)**
+
+Wallet sends a quote request using the generic HTTP proxy message:
+
+```json
+{
+  "type": "SOLIS_REQUEST",
+  "id": "req_001",
+  "method": "POST",
+  "path": "/quote/pos_BLE_789",
+  "body": {
+    "network": "BASE",
+    "asset": "USDC"
+  }
+}
+```
+
+POS forwards to backend (`POST /quote/pos_BLE_789`) and returns:
+
+```json
+{
+  "type": "SOLIS_RESPONSE",
+  "id": "req_001",
+  "status": 200,
+  "body": {
+    "id": "quote_BLE_456",
+    "expiresAt": 1698765532000,
+    "network": "BASE",
+    "value": {
+      "amount": "25.00",
+      "asset": "USDC"
+    }
+  }
+}
+```
+
+8. **Intent Request via SOLIS_REQUEST (Encrypted)**
+
+Wallet requests payment intent:
+
+```json
+{
+  "type": "SOLIS_REQUEST",
+  "id": "req_002",
+  "method": "POST",
+  "path": "/intent/pos_BLE_789",
+  "body": {
+    "network": "BASE",
+    "asset": "USDC",
+    "quoteId": "quote_BLE_456"
+  }
+}
+```
+
+POS returns destination address:
+
+```json
+{
+  "type": "SOLIS_RESPONSE",
+  "id": "req_002",
+  "status": 200,
+  "body": {
+    "network": "BASE",
+    "value": {
+      "amount": "25.00",
+      "asset": "USDC"
+    },
+    "destination": {
+      "type": "CRYPTO",
+      "details": {
+        "address": "0xB180731051bb0116DA91Ab7F1bf3cE1bD7C02Fd4"
+      }
+    }
+  }
+}
+```
+
+9. **Wallet Signs Transaction Locally**
+
+The wallet constructs and signs the transaction locally (no internet required):
+
+```javascript
+// Wallet constructs transaction
+const tx = {
+  to: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC contract
+  data: encodeTransfer(
+    "0xB180731051bb0116DA91Ab7F1bf3cE1bD7C02Fd4", // destination
+    parseUnits("25.00", 6) // amount in smallest unit
+  ),
+  chainId: 8453, // Base
+  // ... gas parameters
+}
+
+// User approves, wallet signs
+const signedTx = await wallet.signTransaction(tx)
+```
+
+10. **Wallet Notifies via SOLIS_REQUEST (Encrypted)**
+
+Wallet sends signed transaction to POS for broadcast:
+
+```json
+{
+  "type": "SOLIS_REQUEST",
+  "id": "req_003",
+  "method": "POST",
+  "path": "/notify/pos_BLE_789",
+  "body": {
+    "hash": "0x7b65b75d204abed71587c9e519a89277766ee1d0",
+    "transaction": "0x02f87382210580843b9aca00852e90edd00082520894...",
+    "sender": {
+      "address": "0xae2Fc483527B8EF99EB5D9B44875F005ba1FaE13"
+    }
+  }
+}
+```
+
+11. **POS Broadcasts and Responds**
+
+POS broadcasts to blockchain and sends confirmation:
+
+```json
+{
+  "type": "SOLIS_RESPONSE",
+  "id": "req_003",
+  "status": 200,
+  "body": {}
+}
+```
+
+12. **Payment Complete**
+
+- Wallet displays success with transaction hash
+- POS terminal shows "Payment Received"
+- Receipt printed/emailed to customer
+- Total time: ~360ms from claim to broadcast
+
+### Timing Breakdown
+
+| Phase | Duration | Cumulative |
+|-------|----------|------------|
+| BLE Advertisement → POS Detection | ~50ms | 50ms |
+| POS Connect + SOLIS_CONNECT | ~100ms | 150ms |
+| User Reviews + Taps "Pay" | User action | - |
+| SOLIS_CLAIM + ECDH Key Exchange | ~30ms | 180ms |
+| Quote Request/Response | ~60ms | 240ms |
+| Intent Request/Response | ~60ms | 300ms |
+| Sign Transaction (local) | ~20ms | 320ms |
+| Notify + Broadcast | ~40ms | 360ms |
+
+**Total protocol overhead: ~360ms** (excluding user review time)
+
+### Sequence Diagram
+
+```
+Customer Wallet                    POS Terminal                     Backend
+(BLE Peripheral)                   (BLE Central)
+     │                                  │                              │
+     │◄═══ Advertise Solis Service ════►│                              │
+     │                                  │                              │
+     │◄──────── BLE Connect ───────────►│                              │
+     │                                  │                              │
+     │◄── SOLIS_CONNECT ────────────────│  (payment + assets bundled)  │
+     │                                  │                              │
+     │   [User reviews, taps "Pay"]     │                              │
+     │                                  │                              │
+     │─── SOLIS_CLAIM ─────────────────►│                              │
+     │      (+ walletPubkey)            │   [POS disconnects others]   │
+     │                                  │                              │
+     │═══════ Encrypted Channel ════════│                              │
+     │                                  │                              │
+     │─── SOLIS_REQUEST ───────────────►│──── POST /quote/... ────────►│
+     │     {method: POST, path: /quote} │                              │
+     │◄── SOLIS_RESPONSE ───────────────│◄─── Quote ───────────────────│
+     │     {status: 200, body: {...}}   │                              │
+     │                                  │                              │
+     │─── SOLIS_REQUEST ───────────────►│──── POST /intent/... ───────►│
+     │     {method: POST, path: /intent}│                              │
+     │◄── SOLIS_RESPONSE ───────────────│◄─── Destination Address ─────│
+     │     {status: 200, body: {...}}   │                              │
+     │                                  │                              │
+     │   [Wallet signs tx locally]      │                              │
+     │                                  │                              │
+     │─── SOLIS_REQUEST ───────────────►│──── Broadcast + Notify ─────►│
+     │     {method: POST, path: /notify}│                              │
+     │◄── SOLIS_RESPONSE ───────────────│◄─── Success ─────────────────│
+     │     {status: 200, body: {}}      │                              │
+     │                                  │                              │
+     ▼                                  ▼                              ▼
+```
+
+### Error Handling
+
+Errors are returned via `SOLIS_RESPONSE` with appropriate HTTP status codes, or via `SOLIS_ERROR` for transport-level issues:
+
+**HTTP-level error (in SOLIS_RESPONSE):**
+```json
+{
+  "type": "SOLIS_RESPONSE",
+  "id": "req_001",
+  "status": 409,
+  "body": {
+    "error": {
+      "code": "UNSUPPORTED_ASSET",
+      "message": "The requested asset is not supported for this payment"
+    }
+  }
+}
+```
+
+**Transport-level error (SOLIS_ERROR):**
+```json
+{
+  "type": "SOLIS_ERROR",
+  "code": "SESSION_EXPIRED",
+  "message": "BLE session has expired. Please reconnect."
+}
+```
+
+BLE-specific error codes:
+- `PAYMENT_CLAIMED` - Another wallet already claimed this payment
+- `SESSION_EXPIRED` - BLE session timed out
+- `PROXY_ERROR` - POS failed to reach backend
+- `BROADCAST_FAILED` - Transaction broadcast to chain failed
+
+### Security Notes
+
+1. **ECDH Key Exchange**: Session encryption established after SOLIS_CLAIM prevents eavesdropping
+2. **Broadcast + Claim**: User self-selection resolves multi-wallet ambiguity naturally
+3. **RSSI Filtering**: POS only connects to devices within ~1-2 meters (-65 dBm threshold)
+4. **Signed Transaction**: POS only receives signed tx - cannot modify or forge
+5. **Wallet Retains Tx**: Wallet keeps signed transaction for resubmission if needed
+6. **Address Verification**: Wallets should display destination address for user verification
+
+### Privacy Considerations
+
+1. **Rotating BLE Addresses**: Wallets use rotating private addresses (standard BLE privacy)
+2. **Rotating Wallet ID Hash**: The advertised wallet ID hash rotates periodically
+3. **Opt-in Advertising**: Wallet only advertises when user explicitly enables "Pay at Store"
+4. **No Tracking**: POS cannot correlate payments across sessions
+
+### Platform Compatibility
+
+| Platform | BLE Peripheral Support | Notes |
+|----------|------------------------|-------|
+| iOS 13+ | ✅ Full support | CoreBluetooth CBPeripheralManager |
+| Android 5.0+ | ✅ Full support | BluetoothLeAdvertiser |
+| Android (no BLE 5.0) | ⚠️ Limited | May have shorter advertising range |
+
+### Benefits
+
+- **Zero Internet Required**: Wallet operates completely offline
+- **Universal Compatibility**: Works on both iOS and Android (no HCE required)
+- **Fast**: ~360ms protocol overhead, sub-second total transaction time
+- **Single Source of Truth**: HTTP API schemas are authoritative - no schema duplication
+- **Familiar UX**: Similar to Apple Pay / Google Pay experience
+- **Secure**: Encrypted channel + signed transactions + RSSI proximity filtering
+- **Natural Multi-Wallet Handling**: Broadcast + Claim lets users self-select
